@@ -1,0 +1,39 @@
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # 手動実行も可能に
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 新しいpushが来たら実行中/待機中の古いデプロイを自動キャンセル（詰まり防止）
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Prepare public artifact
+        run: |
+          mkdir public
+          cp index.html public/
+          cp data.enc.json public/
+          cp .nojekyll public/
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

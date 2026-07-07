@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>化学過去問ビューア</title>
+<meta name="description" content="大学入試化学の過去問を大学・単元・一覧表から探せるビューア">
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --ink:#1c2733; --sub:#6b7a8a;
+  --accent:#0a6e5c; --accent-soft:#e2f1ee; --line:#e3e7ec;
+  --chip:#eef2f6; --chip-ink:#3a4a5a; --warn:#8a5a0a; --warn-soft:#fff3d8;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+body{margin:0; font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif; background:var(--bg); color:var(--ink);}
+header{position:sticky; top:0; z-index:10; background:var(--accent); color:#fff; padding:calc(env(safe-area-inset-top) + 12px) 16px 0;}
+header h1{margin:0; font-size:17px; font-weight:700; padding-bottom:10px;}
+header .headrow{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+header .headrow h1{padding-bottom:0;}
+.gearbtn{flex:none; border:none; background:rgba(255,255,255,.15); color:#fff; font-size:17px; width:34px; height:34px; border-radius:8px; cursor:pointer; margin-bottom:10px;}
+.gearbtn.on{background:#fff; color:var(--accent);}
+.tabs{display:flex; gap:4px;}
+.tabs button{flex:1; border:none; background:rgba(255,255,255,.15); color:#fff; font-size:14px; font-weight:600; padding:10px 0; border-radius:10px 10px 0 0; cursor:pointer;}
+.tabs button.on{background:var(--bg); color:var(--accent);}
+main{padding:14px 14px calc(env(safe-area-inset-bottom) + 24px); max-width:1700px; margin:0 auto;}
+main .panel, main .yeargrid, main .unitgrid, main #univList, main #hitList, main #searchResults, main .searchpanel{max-width:900px; margin-left:auto; margin-right:auto;}
+main .panel{margin-bottom:12px;}
+.crumb{display:flex; align-items:center; gap:8px; margin:2px 0 12px; font-size:13px; color:var(--sub); flex-wrap:wrap;}
+.textbtn{border:none; background:none; color:var(--accent); font-size:13px; font-weight:600; padding:6px 2px; cursor:pointer;}
+.crumb span.sep{color:#b8c2cc;}
+.card{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:10px; cursor:pointer; box-shadow:0 1px 2px rgba(20,40,60,.04);}
+.card:active{background:#f0f4f3;}
+.card h2{margin:0; font-size:16px;}
+.card p{margin:6px 0 0; font-size:12px; color:var(--sub);}
+.yeargrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:10px;}
+.yearbtn{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:14px 4px; text-align:center; font-size:16px; font-weight:700; color:var(--ink); cursor:pointer;}
+.yearbtn small{display:block; font-weight:500; font-size:10px; color:var(--sub); margin-top:3px;}
+.yearbtn:active{background:var(--accent-soft);}
+.qrow{display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);}
+.qrow:last-child{border-bottom:none;}
+.qrow.hitfocus{background:var(--warn-soft); margin:0 -8px; padding-left:8px; padding-right:8px; border-radius:8px;}
+.qnum{flex:none; width:34px; height:34px; border-radius:8px; background:var(--accent-soft); color:var(--accent); font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center;}
+.qbody{flex:1;}
+.qbody .topicrow{display:flex; align-items:center; gap:4px; flex-wrap:wrap;}
+.qbody .topic{font-size:13.5px; font-weight:600;}
+.chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:5px;}
+.chip{background:var(--chip); color:var(--chip-ink); border:none; border-radius:999px; padding:3px 10px; font-size:11.5px; font-weight:600;}
+.chip.link{background:var(--accent-soft); color:var(--accent); cursor:pointer;}
+.panel{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin-bottom:12px;}
+.panel h3{margin:0 0 4px; font-size:14px; color:var(--accent);}
+.viewtabs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;}
+.viewtabs button{border:1px solid var(--line); background:var(--card); border-radius:999px; padding:8px 14px; font-size:13px; font-weight:600; color:var(--ink); cursor:pointer;}
+.viewtabs button.on{background:var(--accent); border-color:var(--accent); color:#fff;}
+.viewer{background:#fff; border:1px solid var(--line); border-radius:8px; overflow:hidden; height:74vh;}
+.viewer iframe{width:100%; height:100%; border:none; display:block;}
+.directviewer{display:flex; align-items:center; justify-content:center;}
+.directopen{min-height:100%; padding:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center;}
+.directopen p{margin:0; font-size:13px; color:var(--sub);}
+.directopen .openlink{margin:0; padding:8px 13px; border:1px solid var(--accent); border-radius:8px; background:var(--accent); color:#fff;}
+.pageviewer{overflow:auto; background:#23262b;}
+.pagestack{display:flex; flex-direction:column; gap:14px; align-items:center; padding:14px; min-height:100%;}
+.pageimg{width:min(100%, 980px); margin:0; background:#fff; box-shadow:0 1px 5px rgba(0,0,0,.22);}
+.pageimg img{display:block; width:100%; height:auto;}
+.pageimg figcaption{padding:6px 10px; font-size:11px; color:#667; background:#f8fafc; border-top:1px solid var(--line);}
+.split{display:flex; gap:12px; align-items:stretch;}
+.pane{flex:1; min-width:0; display:flex; flex-direction:column;}
+.pane .phead{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 8px; min-height:34px;}
+.pane .phead .ptitle{font-size:13.5px; font-weight:700; color:var(--accent);}
+.pane .viewer{height:80vh;}
+.fsbtn{border:1px solid var(--line); background:var(--card); border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; color:var(--ink); cursor:pointer; flex:none;}
+.tblwrap{overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:8px; max-width:1100px; margin:0 auto;}
+table.unittbl{border-collapse:collapse; width:100%; min-width:660px;}
+.unittbl th{background:var(--accent-soft); color:var(--accent); font-size:12.5px; font-weight:700; padding:9px 6px; position:sticky; top:0;}
+.unittbl td{border-top:1px solid var(--line); padding:8px 9px; vertical-align:top;}
+.unittbl td+td, .unittbl th+th{border-left:1px solid var(--line);}
+.unittbl .ycell{font-weight:700; color:var(--accent); cursor:pointer; white-space:nowrap;}
+.unittbl .qcell{cursor:pointer;}
+.unittbl .qcell:active{background:var(--accent-soft);}
+.unittbl .qlabel{font-size:11px; font-weight:800; color:var(--accent); margin-bottom:4px;}
+.unittbl .us{font-size:12.5px; font-weight:700;}
+.unittbl .tprow{display:flex; align-items:center; gap:3px; flex-wrap:wrap;}
+.unittbl .tp{font-size:11px; color:var(--sub); margin-top:3px;}
+.unittbl .empty{color:#c2ccd6; text-align:center;}
+.pane.full{position:fixed; inset:0; z-index:100; background:var(--bg); padding:10px 12px calc(env(safe-area-inset-bottom) + 10px); margin:0;}
+.pane.full .viewer{height:auto; flex:1;}
+body.noscroll{overflow:hidden;}
+@media (max-width:740px){
+  .split{flex-direction:column;}
+  .pane .viewer{height:52vh;}
+}
+@media (max-width:520px){
+  .tabs button{font-size:12px;}
+}
+.openlink{display:inline-block; margin-top:10px; font-size:13px; color:var(--accent); font-weight:600; text-decoration:none;}
+.note{font-size:12px; color:var(--sub); margin:8px 2px;}
+.searchpanel{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:10px;}
+.searchform{display:flex; gap:8px;}
+.searchform input{flex:1; min-width:0; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:16px; color:var(--ink); background:#fff;}
+.searchform input:focus{outline:2px solid var(--accent-soft); border-color:var(--accent);}
+.searchbtn{border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:8px; padding:0 16px; font-size:14px; font-weight:700; cursor:pointer;}
+.searchactions{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px;}
+.searchcount{font-size:13px; font-weight:700; color:var(--accent);}
+.searchstatus{font-size:12px; color:var(--sub);}
+.searchnote{text-align:center;}
+.unitgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px;}
+.unitbtn{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:13px 12px; text-align:left; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer;}
+.unitbtn small{display:block; font-weight:500; font-size:11px; color:var(--sub); margin-top:3px;}
+.unitbtn:active{background:var(--accent-soft);}
+.hitrow{display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:8px; cursor:pointer;}
+.hitrow:active{background:var(--accent-soft);}
+.hitrow .y{flex:none; font-weight:700; font-size:15px; color:var(--accent);}
+.hitrow .meta{flex:1; min-width:0;}
+.hitrow .meta .t{font-size:13px; font-weight:600;}
+.hitrow .meta .u{font-size:11px; color:var(--sub); margin-top:2px;}
+.hitrow .q{flex:none; font-size:12px; font-weight:700; color:var(--sub);}
+h2.section{font-size:15px; margin:4px 2px 12px;}
+.editbtn{flex:none; border:1px solid var(--line); background:var(--card); color:var(--sub); font-size:14px; width:26px; height:26px; min-width:34px; min-height:34px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;}
+.editbtn:active{background:var(--accent-soft); color:var(--accent);}
+.editmark{color:var(--accent); font-size:9px; vertical-align:middle;}
+.editform{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px; width:100%;}
+.editform input[type="text"]{flex:1; min-width:120px; border:1px solid var(--accent); border-radius:6px; padding:7px 9px; font-size:13.5px; color:var(--ink); background:#fff;}
+.editform button{border:1px solid var(--line); background:var(--card); border-radius:6px; padding:7px 10px; font-size:12.5px; font-weight:600; cursor:pointer; min-height:34px;}
+.editform button.primary{border-color:var(--accent); background:var(--accent); color:#fff;}
+.settingspanel{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin:10px auto 0; max-width:900px;}
+.settingspanel h3{margin:0 0 8px; font-size:14px; color:var(--accent);}
+.settingspanel .setrow{margin-bottom:10px;}
+.settingspanel button{border:1px solid var(--line); background:var(--card); border-radius:8px; padding:9px 14px; font-size:13px; font-weight:600; color:var(--ink); cursor:pointer; min-height:34px;}
+.settingspanel button.danger{border-color:#c23; color:#c23;}
+.settingspanel p.desc{font-size:12px; color:var(--sub); margin:4px 0 0;}
+.settingspanel .editcount{font-size:13px; font-weight:700; color:var(--accent); margin-bottom:10px;}
+.settingspanel input[type="file"]{font-size:12px;}
+.univpickerwrap{max-width:900px; margin:0 auto 14px;}
+.univpickerbtn{display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:44px; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 14px; font-size:15px; font-weight:700; color:var(--ink); cursor:pointer; box-shadow:0 1px 2px rgba(20,40,60,.04);}
+.univpickerbtn .caret{color:var(--sub); font-size:13px; font-weight:400;}
+.univpickerpanel{background:var(--card); border:1px solid var(--line); border-radius:8px; margin-top:6px; padding:10px; box-shadow:0 2px 8px rgba(20,40,60,.08);}
+.univpickerpanel input[type="search"]{width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:16px; color:var(--ink); background:#fff;}
+.univpickerpanel input[type="search"]:focus{outline:2px solid var(--accent-soft); border-color:var(--accent);}
+.univpickerlist{max-height:40vh; overflow-y:auto; margin-top:8px; display:flex; flex-direction:column; gap:6px;}
+.univpickeritem{display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:44px; border:1px solid var(--line); background:var(--bg); border-radius:8px; padding:9px 12px; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer; text-align:left;}
+.univpickeritem.on{border-color:var(--accent); background:var(--accent-soft); color:var(--accent);}
+.univpickeritem small{font-weight:500; font-size:11px; color:var(--sub); margin-left:8px; flex:none;}
+.univpickeritem .mark{flex:none; color:var(--accent); font-weight:800; margin-left:6px;}
+.univpickerempty{padding:14px; text-align:center; font-size:13px; color:var(--sub);}
+.unlockpanel{max-width:520px; margin:46px auto 0; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; box-shadow:0 1px 2px rgba(20,40,60,.04);}
+.unlockpanel h2{margin:0 0 8px; font-size:17px; color:var(--accent);}
+.unlockpanel p{margin:0 0 14px; font-size:13px; color:var(--sub); line-height:1.7;}
+.unlockform{display:flex; gap:8px; align-items:stretch;}
+.unlockform input{flex:1; min-width:0; border:1px solid var(--line); border-radius:8px; padding:11px 12px; font-size:16px; color:var(--ink); background:#fff;}
+.unlockform input:focus{outline:2px solid var(--accent-soft); border-color:var(--accent);}
+.unlockform button{border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:8px; padding:0 16px; font-size:14px; font-weight:700; cursor:pointer; min-width:88px;}
+.unlockform button:disabled{opacity:.65; cursor:wait;}
+.unlockmsg{min-height:18px; margin-top:10px; font-size:12.5px; color:var(--sub);}
+.unlockmsg.error{color:#b3261e; font-weight:600;}
+@media (max-width:520px){
+  .unlockpanel{margin-top:24px; padding:16px;}
+  .unlockform{flex-direction:column;}
+  .unlockform button{min-height:42px;}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="headrow">
+    <h1>化学過去問ビューア</h1>
+    <button id="gearBtn" type="button" class="gearbtn" aria-label="設定">&#9881;</button>
+  </div>
+  <div class="tabs" role="tablist" aria-label="表示切替">
+    <button id="tabUniv" type="button" class="on" data-top-tab="univ">大学から探す</button>
+    <button id="tabUnit" type="button" data-top-tab="unit">単元から探す</button>
+    <button id="tabSearch" type="button" data-top-tab="search">検索</button>
+    <button id="tabTable" type="button" data-top-tab="table">一覧表</button>
+  </div>
+</header>
+<div id="settingsPanel" style="display:none"></div>
+<main id="main"></main>
+<script>
+"use strict";
+
+(function bootEncryptedViewer() {
+  const DATA_URL = "data.enc.json";
+  const FORMAT = "kakomon-encrypted-data";
+  const main = document.getElementById("main");
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  function fromBase64url(value) {
+    const base64 = value.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - value.length % 4) % 4);
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  function showUnlock(message = "", variant = "status", busy = false) {
+    main.innerHTML = `
+      <section class="unlockpanel" aria-labelledby="unlockTitle">
+        <h2 id="unlockTitle">データを解除</h2>
+        <p>過去問分析データは暗号化されています。パスフレーズはこの端末内で復号にだけ使われ、保存されません。</p>
+        <form class="unlockform" data-unlock-form>
+          <input id="unlockPassphrase" type="password" autocomplete="current-password" placeholder="パスフレーズ" ${busy ? "disabled" : ""}>
+          <button type="submit" ${busy ? "disabled" : ""}>${busy ? "解除中" : "解除"}</button>
+        </form>
+        <div class="unlockmsg ${variant === "error" ? "error" : ""}" role="${variant === "error" ? "alert" : "status"}">${message}</div>
+      </section>`;
+    const input = document.getElementById("unlockPassphrase");
+    if (input && !busy) input.focus();
+  }
+
+  async function fetchEncryptedData() {
+    const response = await fetch(DATA_URL, { cache: "no-store" });
+    if (!response.ok) throw new Error("暗号化データを読み込めませんでした。");
+    const envelope = await response.json();
+    if (!envelope || envelope.format !== FORMAT || envelope.version !== 1) {
+      throw new Error("暗号化データの形式が不正です。");
+    }
+    return envelope;
+  }
+
+  async function decryptData(passphrase) {
+    if (!window.crypto || !window.crypto.subtle) {
+      throw new Error("このブラウザでは復号機能を使えません。HTTPSまたはlocalhostで開いてください。");
+    }
+
+    const envelope = await fetchEncryptedData();
+    const keyMaterial = await window.crypto.subtle.importKey(
+      "raw",
+      encoder.encode(passphrase),
+      "PBKDF2",
+      false,
+      ["deriveKey"]
+    );
+    const key = await window.crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        hash: "SHA-256",
+        salt: fromBase64url(envelope.salt),
+        iterations: envelope.iterations
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["decrypt"]
+    );
+    const decrypted = await window.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: fromBase64url(envelope.iv) },
+      key,
+      fromBase64url(envelope.ciphertext)
+    );
+    return JSON.parse(decoder.decode(decrypted));
+  }
+
+  function installData(payload) {
+    if (!payload || !payload.examData || !Array.isArray(payload.examData.universities)) {
+      throw new Error("復号データの内容が不正です。");
+    }
+    window.EXAM_DATA = payload.examData;
+    window.UNIT_ORDER = payload.unitOrder || [];
+    window.EXAM_STATS = payload.examStats || null;
+    initPastExamViewer();
+  }
+
+  main.addEventListener("submit", async event => {
+    if (!event.target.matches("[data-unlock-form]")) return;
+    event.preventDefault();
+    const input = document.getElementById("unlockPassphrase");
+    const passphrase = input ? input.value : "";
+    if (!passphrase) {
+      showUnlock("パスフレーズを入力してください。", "error");
+      return;
+    }
+
+    showUnlock("復号しています。", "status", true);
+    try {
+      installData(await decryptData(passphrase));
+    } catch (err) {
+      showUnlock(err && err.message ? err.message : "復号できませんでした。", "error");
+    }
+  });
+
+  showUnlock();
+})();
+
+function initPastExamViewer() {
+  /* ==========================================================
+     定数・ユーティリティ
+     ========================================================== */
+  const DATA = window.EXAM_DATA;
+  const UNIT_ORDER = window.UNIT_ORDER || [];
+  const main = document.getElementById("main");
+  const settingsPanel = document.getElementById("settingsPanel");
+  const state = { answers: [], searchQuery: "", searchHits: [] };
+  const SEARCH_RENDER_LIMIT = 300;
+  let cachedSearchIndex = null;
+
+  const esc = value => String(value == null ? "" : value).replace(/[&<>"']/g, ch => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  }[ch]));
+
+  const preview = id => `https://drive.google.com/file/d/${id}/preview`;
+  const viewUrl = id => `https://drive.google.com/file/d/${id}/view`;
+
+  const toFileUrl = filePath => {
+    if (!filePath) return "";
+    if (/^file:/i.test(filePath)) return filePath;
+    const normalized = filePath.replace(/\\/g, "/");
+    return encodeURI(`file:///${normalized}`);
+  };
+
+  const resourceUrl = value => {
+    if (!value) return "";
+    if (/^(https?:|file:)/i.test(value)) return value;
+    if (/^[A-Za-z]:[\\/]/.test(value) || value.startsWith("\\\\")) return toFileUrl(value);
+    return encodeURI(value.replace(/\\/g, "/"));
+  };
+
+  const drivePreviewPattern = /^https:\/\/drive\.google\.com\/file\/d\/[^/]+\/preview/i;
+  // 【2026-07-02 修正】iPad(Apple touch端末)判定でDriveプレビューのiframe埋め込みを
+  // 回避していたが、これによりiPadでのアプリ内2ペイン表示が失われていたため無効化。
+  // 全端末で従来どおりiframe埋め込み表示を行う。
+  const shouldOpenDriveDirectly = () => false;
+
+  const hasProblemImages = year => Array.isArray(year.problemImagePaths) && year.problemImagePaths.length > 0;
+  const hasProblemPdf = year => Boolean(year.problem || year.problemPath || hasProblemImages(year));
+  const problemPreviewUrl = year => year.problem ? preview(year.problem) : toFileUrl(year.problemPath);
+  const problemViewUrl = year => year.problem ? viewUrl(year.problem) : toFileUrl(year.problemPath);
+
+  const answerItems = year => [
+    ...(year.answers || []).map((answer, index) => ({
+      label: `p${index + 1}`,
+      previewUrl: preview(answer),
+      viewUrl: viewUrl(answer),
+      openLabel: "Driveで開く"
+    })),
+    ...(year.answerPaths || []).map((answerPath, index) => ({
+      label: `p${(year.answers || []).length + index + 1}`,
+      previewUrl: toFileUrl(answerPath),
+      viewUrl: toFileUrl(answerPath),
+      openLabel: /\.pdf(?:[?#].*)?$/i.test(answerPath) ? "PDFで開く" : "画像で開く"
+    }))
+  ];
+  const answerCount = year => answerItems(year).length;
+  const yearLabel = year => `${year.year}${year.label || ""}`;
+  const questionLabel = problem => esc(problem.qLabel || problem.q);
+  const normalizeSearchText = value => String(value == null ? "" : value).normalize("NFKC").toLowerCase();
+  const splitSearchTerms = query => normalizeSearchText(query).trim().split(/[\s　]+/).filter(Boolean);
+
+  function iframeViewer(previewUrl, frameId = "") {
+    const idAttr = frameId ? ` id="${esc(frameId)}"` : "";
+    return `<div class="viewer"><iframe${idAttr} src="${esc(previewUrl)}" allow="fullscreen" allowfullscreen></iframe></div>`;
+  }
+
+  function directDriveViewer(openUrl, openLabel) {
+    return `<div class="viewer directviewer"><div class="directopen">` +
+      `<p>iPadではDriveを直接開いて表示します。</p>` +
+      `<a class="openlink" href="${esc(openUrl)}" target="_blank" rel="noopener">${esc(openLabel)} ↗</a>` +
+      `</div></div>`;
+  }
+
+  function driveAwareViewer(previewUrl, openUrl, openLabel, frameId = "") {
+    return shouldOpenDriveDirectly(previewUrl)
+      ? directDriveViewer(openUrl, openLabel)
+      : iframeViewer(previewUrl, frameId);
+  }
+
+  function tableQuestionLabel(university, q) {
+    const labels = new Set();
+    university.years.forEach(year => {
+      const problem = (year.problems || []).find(item => item.q === q);
+      if (problem) labels.add(String(problem.qLabel || problem.q));
+    });
+    return labels.size === 1 ? [...labels][0] : String(q);
+  }
+
+  function imagePageViewer(paths, titlePrefix) {
+    return `<div class="viewer pageviewer"><div class="pagestack">${
+      paths.map((imagePath, index) => (
+        `<figure class="pageimg"><img src="${esc(resourceUrl(imagePath))}" loading="lazy" alt="${esc(titlePrefix)} p${index + 1}"><figcaption>p${index + 1}</figcaption></figure>`
+      )).join("")
+    }</div></div>`;
+  }
+
+  /* ==========================================================
+     状態管理: 中分類(topic)編集の保存・読み込み
+     ========================================================== */
+  const TOPIC_EDITS_KEY = "kakomonTopicEdits.v1";
+
+  function loadTopicEdits() {
+    try {
+      const raw = localStorage.getItem(TOPIC_EDITS_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (err) {
+      return {};
+    }
+  }
+
+  function saveTopicEdits(edits) {
+    try {
+      localStorage.setItem(TOPIC_EDITS_KEY, JSON.stringify(edits));
+    } catch (err) {
+      /* localStorageが使えない環境では無視 */
+    }
+  }
+
+  let topicEdits = loadTopicEdits();
+
+  function topicEditKey(university, year, problem) {
+    return `${university.id}::${year.year}::${year.label || ""}::${problem.q}`;
+  }
+
+  function effectiveTopic(university, year, problem) {
+    const key = topicEditKey(university, year, problem);
+    return Object.prototype.hasOwnProperty.call(topicEdits, key) ? topicEdits[key] : (problem.topic || "");
+  }
+
+  function hasTopicEdit(university, year, problem) {
+    const key = topicEditKey(university, year, problem);
+    return Object.prototype.hasOwnProperty.call(topicEdits, key);
+  }
+
+  function setTopicEdit(university, year, problem, value) {
+    const key = topicEditKey(university, year, problem);
+    topicEdits[key] = value;
+    saveTopicEdits(topicEdits);
+    cachedSearchIndex = null;
+  }
+
+  function clearTopicEdit(university, year, problem) {
+    const key = topicEditKey(university, year, problem);
+    delete topicEdits[key];
+    saveTopicEdits(topicEdits);
+    cachedSearchIndex = null;
+  }
+
+  function topicEditCount() {
+    return Object.keys(topicEdits).length;
+  }
+
+  /* ==========================================================
+     編集オーバーレイ: topic編集UIの描画・操作
+     ========================================================== */
+
+  // topic表示+編集ボタンHTML。variant: "qrow"=年度詳細, "tbl"=一覧表セル
+  const TOPIC_VARIANTS = {
+    qrow: { row: "topicrow", text: "topic", idPrefix: "qrow" },
+    tbl: { row: "tprow", text: "tp", idPrefix: "tblcell" }
+  };
+
+  function topicRowHtml(university, year, problem, variant) {
+    const cls = TOPIC_VARIANTS[variant] || TOPIC_VARIANTS.qrow;
+    const editKey = topicEditKey(university, year, problem);
+    const editId = `${cls.idPrefix}-${cssEscapeId(editKey)}`;
+    const edited = hasTopicEdit(university, year, problem);
+    const text = effectiveTopic(university, year, problem);
+    const marker = edited ? ' <span class="editmark">&#9679;</span>' : "";
+    return `<div class="${cls.row}" data-topic-edit-key="${esc(editKey)}" data-topic-variant="${esc(variant)}" id="${esc(editId)}">` +
+      `<span class="${cls.text}" data-topic-text="1">${esc(text)}</span>${marker}` +
+      button("&#9998;", "editTopic", { editkey: editKey }, "editbtn") +
+      `</div>`;
+  }
+
+  function cssEscapeId(value) {
+    return String(value).replace(/[^a-zA-Z0-9_-]/g, ch => `_${ch.charCodeAt(0)}_`);
+  }
+
+  // editKeyから対応するuniversity/year/problemを逆引き
+  function resolveByEditKey(editKey) {
+    const parts = editKey.split("::");
+    if (parts.length < 4) return null;
+    const problemQ = Number(parts[parts.length - 1]);
+    const yearLabelPart = parts[parts.length - 2];
+    const yearNum = Number(parts[parts.length - 3]);
+    const universityId = parts.slice(0, parts.length - 3).join("::");
+    const university = DATA.universities.find(item => item.id === universityId);
+    if (!university) return null;
+    const year = university.years.find(item => item.year === yearNum && (item.label || "") === yearLabelPart);
+    if (!year) return null;
+    const problem = (year.problems || []).find(item => item.q === problemQ);
+    if (!problem) return null;
+    return { university, year, problem };
+  }
+
+  function openTopicEditor(editKey, containerEl) {
+    const resolved = resolveByEditKey(editKey);
+    if (!resolved) return;
+    const { university, year, problem } = resolved;
+    const current = effectiveTopic(university, year, problem);
+    const edited = hasTopicEdit(university, year, problem);
+    const formHtml = `<form class="editform" data-topic-edit-form="${esc(editKey)}">` +
+      `<input type="text" value="${esc(current)}" data-topic-input="1">` +
+      `<button type="submit" class="primary">保存</button>` +
+      `<button type="button" data-action="cancelTopicEdit" data-editkey="${esc(editKey)}">取消</button>` +
+      (edited ? `<button type="button" data-action="revertTopicEdit" data-editkey="${esc(editKey)}">元に戻す</button>` : "") +
+      `</form>`;
+    containerEl.innerHTML = formHtml;
+    const input = containerEl.querySelector("[data-topic-input]");
+    if (input) {
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    }
+  }
+
+  function closeTopicEditor(editKey, containerEl) {
+    const resolved = resolveByEditKey(editKey);
+    if (!resolved || !containerEl) return;
+    const { university, year, problem } = resolved;
+    const variant = containerEl.getAttribute("data-topic-variant") || "qrow";
+    containerEl.outerHTML = topicRowHtml(university, year, problem, variant);
+  }
+
+  function submitTopicEdit(editKey, value) {
+    const resolved = resolveByEditKey(editKey);
+    if (!resolved) return;
+    const { university, year, problem } = resolved;
+    setTopicEdit(university, year, problem, value);
+    rerenderCurrentScreen();
+  }
+
+  function revertTopicEdit(editKey) {
+    const resolved = resolveByEditKey(editKey);
+    if (!resolved) return;
+    const { university, year, problem } = resolved;
+    clearTopicEdit(university, year, problem);
+    rerenderCurrentScreen();
+  }
+
+  // 現在表示中の画面を再描画するための状態と関数
+  let currentScreen = { name: "univ", args: [] };
+
+  function rerenderCurrentScreen() {
+    // 編集保存などによる再描画ではスクロール位置を維持する
+    // (各showXxxは内部でwindow.scrollTo(0,0)するため、描画後に復元)
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    renderScreen();
+    window.scrollTo(scrollX, scrollY);
+  }
+
+  function renderScreen() {
+    switch (currentScreen.name) {
+      case "univ": showUnivTop(); break;
+      case "years": showYears(...currentScreen.args); break;
+      case "year": showYear(...currentScreen.args); break;
+      case "unitTop": showUnitTop(); break;
+      case "unit": showUnit(...currentScreen.args); break;
+      case "table": showTableTop(...currentScreen.args); break;
+      case "search": showSearch(state.searchQuery); break;
+      default: showUnivTop();
+    }
+  }
+
+  /* ==========================================================
+     検索
+     ========================================================== */
+
+  function searchIndex() {
+    if (cachedSearchIndex) return cachedSearchIndex;
+    const rows = [];
+    DATA.universities.forEach((university, ui) => {
+      university.years.forEach((year, yi) => {
+        (year.problems || []).forEach(problem => {
+          const qText = String(problem.qLabel || problem.q);
+          const units = problem.units || [];
+          const topic = effectiveTopic(university, year, problem);
+          const fields = [
+            university.name,
+            year.year,
+            year.label || "",
+            problem.q,
+            problem.qLabel || "",
+            `大問${qText}`,
+            ...units,
+            topic
+          ];
+          rows.push({
+            ui,
+            yi,
+            year: year.year,
+            label: year.label || "",
+            uname: university.name,
+            q: problem.q,
+            qLabel: problem.qLabel || "",
+            topic: topic,
+            units,
+            haystack: normalizeSearchText(fields.join(" "))
+          });
+        });
+      });
+    });
+    cachedSearchIndex = rows;
+    return rows;
+  }
+
+  function searchExams(query) {
+    const terms = splitSearchTerms(query);
+    if (!terms.length) return [];
+    return searchIndex()
+      .filter(row => terms.every(term => row.haystack.includes(term)))
+      .sort((a, b) => b.year - a.year || a.uname.localeCompare(b.uname, "ja") || a.q - b.q);
+  }
+
+  function searchResultMarkdown(query, hits) {
+    const title = query.trim() ? `# 検索結果: ${query.trim()}` : "# 検索結果";
+    const lines = [title, "", `件数: ${hits.length}`, ""];
+    if (!hits.length) {
+      lines.push("該当なし");
+      return lines.join("\n");
+    }
+    hits.forEach(hit => {
+      lines.push(`- ${hit.uname} ${hit.year}${hit.label}年度 大問${hit.qLabel || hit.q}`);
+      lines.push(`  - 単元: ${hit.units.join("・")}`);
+      lines.push(`  - 内容: ${hit.topic}`);
+    });
+    return lines.join("\n");
+  }
+
+  function searchMarkdownFilename(query) {
+    const base = normalizeSearchText(query).replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "_").slice(0, 40);
+    return `chem_search_${base || "results"}.md`;
+  }
+
+  function downloadBlob(text, mime, filename) {
+    const blob = new Blob([text], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadSearchMarkdown() {
+    const md = searchResultMarkdown(state.searchQuery, state.searchHits);
+    downloadBlob(md, "text/markdown;charset=utf-8", searchMarkdownFilename(state.searchQuery));
+  }
+
+  function copySearchMarkdown() {
+    const status = document.getElementById("searchStatus");
+    const md = searchResultMarkdown(state.searchQuery, state.searchHits);
+    const done = () => {
+      if (status) status.textContent = "コピーしました";
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(md).then(done).catch(() => {
+        if (status) status.textContent = "コピーできませんでした";
+      });
+    } else {
+      const box = document.createElement("textarea");
+      box.value = md;
+      document.body.appendChild(box);
+      box.select();
+      document.execCommand("copy");
+      box.remove();
+      done();
+    }
+  }
+
+  function searchActionsHtml(query, hitCount) {
+    const hasQuery = Boolean(query.trim());
+    const disabled = hasQuery ? "" : " disabled";
+    return '<div class="searchactions">' +
+      `<span class="searchcount">${hasQuery ? `${hitCount}件` : "検索語を入力"}</span>` +
+      `<button type="button" class="textbtn" data-action="copySearchMd"${disabled}>MDコピー</button>` +
+      `<button type="button" class="textbtn" data-action="downloadSearchMd"${disabled}>MD保存</button>` +
+      '<span id="searchStatus" class="searchstatus"></span>' +
+      '</div>';
+  }
+
+  function searchResultsHtml(query, hits) {
+    const hasQuery = Boolean(query.trim());
+    const shown = hits.slice(0, SEARCH_RENDER_LIMIT);
+    let html = "";
+    if (hasQuery && !hits.length) {
+      html += '<div class="note searchnote">該当なし</div>';
+    }
+    if (hits.length > shown.length) {
+      html += `<div class="note searchnote">表示は${shown.length}件まで。MD出力には${hits.length}件すべて含まれます。</div>`;
+    }
+    shown.forEach(hit => {
+      html += `<div class="hitrow" data-action="showYear" data-ui="${hit.ui}" data-yi="${hit.yi}" data-focus-q="${hit.q}">`;
+      html += `<div class="y">${hit.year}${esc(hit.label)}</div>`;
+      html += `<div class="meta"><div class="t">${esc(hit.uname)}・大問${esc(hit.qLabel || hit.q)}</div>`;
+      html += `<div class="u">${esc(hit.topic)} / ${hit.units.map(esc).join("・")}</div></div>`;
+      html += '<div class="q">開く &gt;</div></div>';
+    });
+    return html;
+  }
+
+  function updateSearchResults(query) {
+    state.searchQuery = query;
+    state.searchHits = searchExams(query);
+    const actions = document.getElementById("searchActions");
+    const results = document.getElementById("searchResults");
+    if (actions) actions.innerHTML = searchActionsHtml(query, state.searchHits.length);
+    if (results) results.innerHTML = searchResultsHtml(query, state.searchHits);
+  }
+
+  /* ==========================================================
+     各画面の描画
+     ========================================================== */
+
+  function setTab(which) {
+    document.getElementById("tabUniv").classList.toggle("on", which === "univ");
+    document.getElementById("tabUnit").classList.toggle("on", which === "unit");
+    document.getElementById("tabSearch").classList.toggle("on", which === "search");
+    document.getElementById("tabTable").classList.toggle("on", which === "table");
+  }
+
+  function button(label, action, attrs = {}, className = "textbtn") {
+    const attrText = Object.entries(attrs)
+      .map(([key, value]) => ` data-${key}="${esc(value)}"`)
+      .join("");
+    return `<button type="button" class="${className}" data-action="${action}"${attrText}>${label}</button>`;
+  }
+
+  function showSearch(query = state.searchQuery) {
+    currentScreen = { name: "search", args: [] };
+    setTab("search");
+    state.searchQuery = query;
+    state.searchHits = searchExams(query);
+    let html = '<h2 class="section">検索</h2>';
+    html += '<div class="searchpanel">';
+    html += '<form class="searchform" data-search-form="1">';
+    html += `<input id="searchInput" type="search" value="${esc(query)}" placeholder="例: ストレッカー" autocomplete="off">`;
+    html += '<button type="submit" class="searchbtn">検索</button>';
+    html += '</form>';
+    html += `<div id="searchActions">${searchActionsHtml(query, state.searchHits.length)}</div>`;
+    html += '</div>';
+    html += `<div id="searchResults">${searchResultsHtml(query, state.searchHits)}</div>`;
+    main.innerHTML = html;
+    const input = document.getElementById("searchInput");
+    if (input) {
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    }
+    window.scrollTo(0, 0);
+  }
+
+  const TABLE_UNIV_KEY = "kakomonTableUniv.v1";
+
+  function loadTableUnivIndex() {
+    try {
+      const raw = localStorage.getItem(TABLE_UNIV_KEY);
+      if (!raw) return 0;
+      const index = DATA.universities.findIndex(item => item.id === raw);
+      return index >= 0 ? index : 0;
+    } catch (err) {
+      return 0;
+    }
+  }
+
+  function saveTableUnivId(id) {
+    try {
+      localStorage.setItem(TABLE_UNIV_KEY, id);
+    } catch (err) {
+      /* localStorageが使えない環境では無視 */
+    }
+  }
+
+  let tableUnivPickerOpen = false;
+
+  function univPickerListHtml(university, filterText) {
+    const terms = normalizeSearchText(filterText).trim();
+    const items = DATA.universities
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => !terms || normalizeSearchText(item.name).includes(terms));
+    if (!items.length) {
+      return '<div class="univpickerempty">該当なし</div>';
+    }
+    return items.map(({ item, index }) => {
+      const cls = item.id === university.id ? "univpickeritem on" : "univpickeritem";
+      const mark = item.id === university.id ? '<span class="mark">&#10003;</span>' : "";
+      return `<button type="button" class="${cls}" data-action="pickTableUniv" data-ui="${index}">` +
+        `<span>${esc(item.name)} <small>${esc(item.years.length)}年度分</small></span>${mark}` +
+        `</button>`;
+    }).join("");
+  }
+
+  function univPickerHtml(university) {
+    let html = '<div class="univpickerwrap">';
+    html += `<button type="button" class="univpickerbtn" data-action="toggleUnivPicker">` +
+      `<span>${esc(university.name)}</span><span class="caret">&#9662;</span></button>`;
+    if (tableUnivPickerOpen) {
+      html += '<div class="univpickerpanel">';
+      html += `<input type="search" id="univPickerInput" placeholder="大学名で絞り込み" autocomplete="off" value="">`;
+      html += `<div class="univpickerlist" id="univPickerList">${univPickerListHtml(university, "")}</div>`;
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function showTableTop(ui) {
+    if (ui === undefined) {
+      ui = loadTableUnivIndex();
+    }
+    currentScreen = { name: "table", args: [ui] };
+    setTab("table");
+    const university = DATA.universities[ui];
+    saveTableUnivId(university.id);
+    const maxQ = Math.max(...university.years.flatMap(year => (year.problems || []).map(problem => problem.q)), 1);
+    let html = '<h2 class="section" style="text-align:center">単元一覧表</h2>';
+    html += univPickerHtml(university);
+    html += '<div class="tblwrap"><table class="unittbl"><thead><tr><th>年度</th>';
+    for (let q = 1; q <= maxQ; q += 1) html += `<th>大問${esc(tableQuestionLabel(university, q))}</th>`;
+    html += "</tr></thead><tbody>";
+    [...university.years].sort((a, b) => b.year - a.year).forEach(year => {
+      const yi = university.years.indexOf(year);
+      html += `<tr><td class="ycell" data-action="showYear" data-ui="${ui}" data-yi="${yi}">${yearLabel(year)}</td>`;
+      for (let q = 1; q <= maxQ; q += 1) {
+        const problem = year.problems.find(item => item.q === q);
+        if (problem) {
+          html += `<td class="qcell" data-action="showYear" data-ui="${ui}" data-yi="${yi}" data-focus-q="${q}">` +
+            (problem.qLabel ? `<div class="qlabel">大問${questionLabel(problem)}</div>` : "") +
+            `<div class="us">${problem.units.map(esc).join("・")}</div>` +
+            topicRowHtml(university, year, problem, "tbl") +
+            `</td>`;
+        } else {
+          html += '<td class="empty">-</td>';
+        }
+      }
+      html += "</tr>";
+    });
+    html += "</tbody></table></div>";
+    html += '<div class="note" style="text-align:center">セルをタップするとその年度の問題・解答が開きます。✎で内容要約を編集できます。</div>';
+    main.innerHTML = html;
+    if (tableUnivPickerOpen) {
+      const input = document.getElementById("univPickerInput");
+      if (input) input.focus();
+    }
+    window.scrollTo(0, 0);
+  }
+
+  function showUnivTop() {
+    currentScreen = { name: "univ", args: [] };
+    setTab("univ");
+    let html = '<h2 class="section">大学を選んでください</h2><div id="univList">';
+    DATA.universities.forEach((university, ui) => {
+      html += `<div class="card" data-action="showYears" data-ui="${ui}"><h2>${esc(university.name)}</h2><p>${esc(university.note)}</p></div>`;
+    });
+    html += "</div>";
+    main.innerHTML = html;
+    window.scrollTo(0, 0);
+  }
+
+  function showYears(ui) {
+    currentScreen = { name: "years", args: [ui] };
+    setTab("univ");
+    const university = DATA.universities[ui];
+    let html = '<div class="crumb">';
+    html += button("大学一覧", "showUnivTop");
+    html += `<span class="sep">&gt;</span><b>${esc(university.name)}</b></div>`;
+    html += '<h2 class="section">年度を選んでください</h2><div class="yeargrid">';
+    [...university.years].sort((a, b) => b.year - a.year).forEach(year => {
+      const yi = university.years.indexOf(year);
+      const note = !hasProblemPdf(year) ? "解答のみ" : (answerCount(year) === 0 ? "問題のみ" : "");
+      html += `<button type="button" class="yearbtn" data-action="showYear" data-ui="${ui}" data-yi="${yi}">` +
+        `${yearLabel(year)}<small>${esc(note)}&nbsp;</small></button>`;
+    });
+    html += "</div>";
+    main.innerHTML = html;
+    window.scrollTo(0, 0);
+  }
+
+  function showYear(ui, yi, focusQ) {
+    currentScreen = { name: "year", args: [ui, yi, focusQ] };
+    setTab("univ");
+    const university = DATA.universities[ui];
+    const year = university.years[yi];
+    let html = '<div class="crumb">';
+    html += button("大学一覧", "showUnivTop");
+    html += '<span class="sep">&gt;</span>';
+    html += button(esc(university.name), "showYears", { ui });
+    html += `<span class="sep">&gt;</span><b>${yearLabel(year)}年度</b></div>`;
+
+    if (year.problems.length) {
+      html += '<div class="panel"><h3>大問別の単元</h3>';
+      year.problems.forEach(problem => {
+        const focusClass = problem.q === focusQ ? " hitfocus" : "";
+        html += `<div class="qrow${focusClass}">`;
+        html += `<div class="qnum">${questionLabel(problem)}</div><div class="qbody">`;
+        html += topicRowHtml(university, year, problem, "qrow");
+        html += '<div class="chips">';
+        html += problem.units.map(unit => (
+          `<button type="button" class="chip link" data-action="showUnit" data-unit="${esc(unit)}">${esc(unit)}</button>`
+        )).join("");
+        html += "</div></div></div>";
+      });
+      html += "</div>";
+    } else {
+      html += `<div class="note">${hasProblemPdf(year) ? "この年度の単元分類は未登録です。問題・解答は下に表示されます。" : "この年度は解答のみ収録されています(問題PDFなし)。"}</div>`;
+    }
+
+    const answers = answerItems(year);
+    if (hasProblemPdf(year) || answers.length) {
+      let ansInit = 0;
+      if (typeof focusQ === "number" && answers.length) {
+        ansInit = Math.min(focusQ - 1, answers.length - 1);
+      }
+      html += '<div class="split">';
+      if (hasProblemPdf(year)) {
+        html += '<div class="pane">';
+        html += '<div class="phead"><span class="ptitle">問題</span>';
+        if (year.problem || year.problemPath) {
+          html += `<a class="openlink" style="margin:0 0 0 auto" href="${problemViewUrl(year)}" target="_blank" rel="noopener">${year.problem ? "Driveで開く" : "PDFで開く"} ↗</a>`;
+        }
+        html += '<button type="button" class="fsbtn" data-action="togglePane">⛶ 拡大</button></div>';
+        if (hasProblemImages(year)) {
+          html += imagePageViewer(year.problemImagePaths, `${university.name} ${yearLabel(year)} 問題`);
+        } else {
+          html += driveAwareViewer(problemPreviewUrl(year), problemViewUrl(year), year.problem ? "Driveで開く" : "PDFで開く");
+        }
+        html += "</div>";
+      }
+      if (answers.length) {
+        html += '<div class="pane">';
+        html += '<div class="phead"><span class="ptitle">解答</span><div class="viewtabs" style="margin:0">';
+        html += answers.map((answer, index) => {
+          const cls = index === ansInit ? "on" : "";
+          return `<button type="button" class="${cls}" data-action="switchAns" data-answer-tab="1" data-index="${index}">${esc(answer.label)}</button>`;
+        }).join("");
+        html += "</div>";
+        html += `<a class="openlink" style="margin:0 0 0 auto" id="ansOpen" href="${answers[ansInit].viewUrl}" target="_blank" rel="noopener">${esc(answers[ansInit].openLabel)} ↗</a>`;
+        html += '<button type="button" class="fsbtn" data-action="togglePane">⛶ 拡大</button></div>';
+        html += `<div id="ansViewer">${driveAwareViewer(answers[ansInit].previewUrl, answers[ansInit].viewUrl, answers[ansInit].openLabel, "ansFrame")}</div>`;
+        html += "</div>";
+        state.answers = answers;
+      } else if (hasProblemPdf(year)) {
+        html += '<div class="pane"><div class="phead"><span class="ptitle">解答</span></div>';
+        html += '<div class="note" style="margin:0">この年度の解答は未収録です。</div></div>';
+        state.answers = [];
+      }
+      html += "</div>";
+      html += '<div class="note">表示されない場合は、DriveはGoogleアカウント、ローカルPDF/画像はファイル同期状態を確認してください。</div>';
+    }
+    main.innerHTML = html;
+    window.scrollTo(0, 0);
+  }
+
+  function togglePane(trigger) {
+    const pane = trigger.closest(".pane");
+    const on = pane.classList.toggle("full");
+    trigger.textContent = on ? "✕ 閉じる" : "⛶ 拡大";
+    document.body.classList.toggle("noscroll", on);
+  }
+
+  function switchAns(index) {
+    const answer = state.answers[index];
+    if (!answer) return;
+    main.querySelectorAll("[data-answer-tab]").forEach((tab, tabIndex) => {
+      tab.classList.toggle("on", tabIndex === index);
+    });
+    document.getElementById("ansViewer").innerHTML = driveAwareViewer(answer.previewUrl, answer.viewUrl, answer.openLabel, "ansFrame");
+    document.getElementById("ansOpen").href = answer.viewUrl;
+    document.getElementById("ansOpen").textContent = `${answer.openLabel} ↗`;
+  }
+
+  function unitIndex() {
+    const map = {};
+    DATA.universities.forEach((university, ui) => {
+      university.years.forEach((year, yi) => {
+        year.problems.forEach(problem => {
+          problem.units.forEach(unit => {
+            (map[unit] = map[unit] || []).push({
+              ui,
+              yi,
+              year: year.year,
+              label: year.label || "",
+              uname: university.name,
+              q: problem.q,
+              qLabel: problem.qLabel || "",
+              topic: effectiveTopic(university, year, problem),
+              units: problem.units
+            });
+          });
+        });
+      });
+    });
+    return map;
+  }
+
+  function showUnitTop() {
+    currentScreen = { name: "unitTop", args: [] };
+    setTab("unit");
+    const map = unitIndex();
+    const keys = UNIT_ORDER.filter(key => map[key]).concat(Object.keys(map).filter(key => !UNIT_ORDER.includes(key)));
+    let html = '<h2 class="section">単元を選んでください</h2><div class="unitgrid">';
+    keys.forEach(key => {
+      html += `<button type="button" class="unitbtn" data-action="showUnit" data-unit="${esc(key)}">${esc(key)}<small>${map[key].length}問</small></button>`;
+    });
+    html += "</div>";
+    main.innerHTML = html;
+    window.scrollTo(0, 0);
+  }
+
+  function showUnit(unit) {
+    currentScreen = { name: "unit", args: [unit] };
+    setTab("unit");
+    const hits = (unitIndex()[unit] || []).sort((a, b) => b.year - a.year || a.q - b.q);
+    let html = '<div class="crumb">';
+    html += button("単元一覧", "showUnitTop");
+    html += `<span class="sep">&gt;</span><b>${esc(unit)}</b><span style="color:#9aa7b3">(${hits.length}問)</span></div>`;
+    html += '<div id="hitList">';
+    hits.forEach(hit => {
+      html += `<div class="hitrow" data-action="showYear" data-ui="${hit.ui}" data-yi="${hit.yi}" data-focus-q="${hit.q}">`;
+      html += `<div class="y">${hit.year}${esc(hit.label)}</div>`;
+      html += `<div class="meta"><div class="t">${esc(hit.uname)}・大問${esc(hit.qLabel || hit.q)}</div>`;
+      html += `<div class="u">${esc(hit.topic)} / ${hit.units.map(esc).join("・")}</div></div>`;
+      html += '<div class="q">開く &gt;</div></div>';
+    });
+    html += "</div>";
+    main.innerHTML = html;
+    window.scrollTo(0, 0);
+  }
+
+  /* ==========================================================
+     設定パネル(歯車): 編集の書き出し・読み込み・破棄
+     ========================================================== */
+
+  function buildDataJsText() {
+    // 現在の編集をtopicへ反映した完全なEXAM_DATAを構築し、data.js形式(大学1件1行)のテキストを返す
+    const compact = obj => JSON.stringify(obj);
+    const merged = {
+      schemaVersion: DATA.schemaVersion,
+      generatedAt: DATA.generatedAt,
+      source: DATA.source,
+      universities: DATA.universities.map(university => ({
+        ...university,
+        years: university.years.map(year => ({
+          ...year,
+          problems: (year.problems || []).map(problem => ({
+            ...problem,
+            topic: effectiveTopic(university, year, problem)
+          }))
+        }))
+      }))
+    };
+    const header = {
+      schemaVersion: merged.schemaVersion,
+      generatedAt: merged.generatedAt,
+      source: merged.source
+    };
+    const headerJson = compact(header);
+    let headerPrefix = headerJson.slice(0, -1);
+    if (!headerPrefix.endsWith("{")) headerPrefix += ",";
+
+    const lines = [];
+    lines.push("// 自動生成データ。アプリ内の「data.jsを書き出す」機能で編集を反映できる。");
+    lines.push(`window.EXAM_DATA = ${headerPrefix}"universities":[`);
+    merged.universities.forEach((university, index) => {
+      const suffix = index < merged.universities.length - 1 ? "," : "";
+      lines.push(compact(university) + suffix);
+    });
+    lines.push("]};");
+    lines.push(`window.UNIT_ORDER = ${compact(UNIT_ORDER)};`);
+    lines.push(`window.EXAM_STATS = ${compact(window.EXAM_STATS)};`);
+    lines.push("");
+    return lines.join("\n");
+  }
+
+  function downloadTopicEditsJson() {
+    const json = JSON.stringify(topicEdits, null, 1);
+    downloadBlob(json, "application/json;charset=utf-8", "kakomon_topic_edits.json");
+  }
+
+  function downloadDataJs() {
+    const text = buildDataJsText();
+    downloadBlob(text, "text/javascript;charset=utf-8", "data.js");
+  }
+
+  function mergeTopicEditsFromJson(jsonText) {
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch (err) {
+      alert("JSONの読み込みに失敗しました。");
+      return;
+    }
+    if (!parsed || typeof parsed !== "object") {
+      alert("JSONの形式が不正です。");
+      return;
+    }
+    topicEdits = { ...topicEdits, ...parsed };
+    saveTopicEdits(topicEdits);
+    cachedSearchIndex = null;
+    renderSettingsPanel();
+    rerenderCurrentScreen();
+  }
+
+  function discardAllTopicEdits() {
+    if (!confirm("編集をすべて破棄します。よろしいですか?")) return;
+    topicEdits = {};
+    saveTopicEdits(topicEdits);
+    cachedSearchIndex = null;
+    renderSettingsPanel();
+    rerenderCurrentScreen();
+  }
+
+  let settingsOpen = false;
+
+  function renderSettingsPanel() {
+    if (!settingsOpen) {
+      settingsPanel.style.display = "none";
+      settingsPanel.innerHTML = "";
+      return;
+    }
+    settingsPanel.style.display = "block";
+    let html = '<div class="settingspanel">';
+    html += '<h3>編集の書き出し・読み込み</h3>';
+    html += `<div class="editcount">現在の編集件数: ${topicEditCount()}件</div>`;
+    html += '<div class="setrow">';
+    html += '<button type="button" data-action="downloadTopicEdits">編集をJSONで書き出す</button>';
+    html += '<p class="desc">kakomon_topic_edits.json をダウンロードします。</p>';
+    html += '</div>';
+    html += '<div class="setrow">';
+    html += '<label class="textbtn" style="display:inline-block">編集JSONを読み込む: <input type="file" id="topicEditsFileInput" accept="application/json"></label>';
+    html += '<p class="desc">読み込んだ内容は既存の編集にマージされます。</p>';
+    html += '</div>';
+    html += '<div class="setrow">';
+    html += '<button type="button" data-action="downloadDataJs">data.jsを書き出す</button>';
+    html += '<p class="desc">現在の編集をすべてtopicに反映した完全なdata.jsをダウンロードします。これをリポジトリのdata.jsと差し替えれば編集が恒久化されます。</p>';
+    html += '</div>';
+    html += '<div class="setrow">';
+    html += '<button type="button" class="danger" data-action="discardTopicEdits">編集をすべて破棄</button>';
+    html += '</div>';
+    html += '</div>';
+    settingsPanel.innerHTML = html;
+    const fileInput = document.getElementById("topicEditsFileInput");
+    if (fileInput) {
+      fileInput.addEventListener("change", event => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => mergeTopicEditsFromJson(String(reader.result || ""));
+        reader.readAsText(file, "utf-8");
+      });
+    }
+  }
+
+  function toggleSettingsPanel() {
+    settingsOpen = !settingsOpen;
+    document.getElementById("gearBtn").classList.toggle("on", settingsOpen);
+    renderSettingsPanel();
+  }
+
+  /* ==========================================================
+     イベント配線
+     ========================================================== */
+
+  document.querySelector("[data-top-tab='univ']").addEventListener("click", showUnivTop);
+  document.querySelector("[data-top-tab='unit']").addEventListener("click", showUnitTop);
+  document.querySelector("[data-top-tab='search']").addEventListener("click", () => showSearch());
+  document.querySelector("[data-top-tab='table']").addEventListener("click", () => {
+    tableUnivPickerOpen = false;
+    showTableTop();
+  });
+  document.getElementById("gearBtn").addEventListener("click", toggleSettingsPanel);
+
+  main.addEventListener("submit", event => {
+    if (event.target.matches("[data-search-form]")) {
+      event.preventDefault();
+      const input = document.getElementById("searchInput");
+      updateSearchResults(input ? input.value : "");
+      return;
+    }
+    if (event.target.matches("[data-topic-edit-form]")) {
+      event.preventDefault();
+      const editKey = event.target.getAttribute("data-topic-edit-form");
+      const input = event.target.querySelector("[data-topic-input]");
+      submitTopicEdit(editKey, input ? input.value : "");
+    }
+  });
+
+  main.addEventListener("input", event => {
+    if (event.target.id === "searchInput") {
+      updateSearchResults(event.target.value);
+      return;
+    }
+    if (event.target.id === "univPickerInput") {
+      const university = DATA.universities[currentScreen.args[0]];
+      const list = document.getElementById("univPickerList");
+      if (university && list) list.innerHTML = univPickerListHtml(university, event.target.value);
+      return;
+    }
+  });
+
+  main.addEventListener("click", event => {
+    const trigger = event.target.closest("[data-action]");
+    if (!trigger) return;
+    // 編集フォーム内のクリック(入力欄・保存ボタン等)が、外側の
+    // セル/行のdata-action(showYear等)を誤発火させないようにする
+    const editForm = event.target.closest(".editform");
+    if (editForm && !editForm.contains(trigger)) return;
+    const action = trigger.dataset.action;
+    if (action === "showUnivTop") showUnivTop();
+    if (action === "showYears") showYears(Number(trigger.dataset.ui));
+    if (action === "showYear") showYear(Number(trigger.dataset.ui), Number(trigger.dataset.yi), trigger.dataset.focusQ ? Number(trigger.dataset.focusQ) : undefined);
+    if (action === "showUnitTop") showUnitTop();
+    if (action === "showUnit") showUnit(trigger.dataset.unit);
+    if (action === "showTable") showTableTop(Number(trigger.dataset.ui));
+    if (action === "toggleUnivPicker") {
+      tableUnivPickerOpen = !tableUnivPickerOpen;
+      showTableTop(currentScreen.args[0]);
+    }
+    if (action === "pickTableUniv") {
+      tableUnivPickerOpen = false;
+      showTableTop(Number(trigger.dataset.ui));
+    }
+    if (action === "togglePane") togglePane(trigger);
+    if (action === "switchAns") switchAns(Number(trigger.dataset.index));
+    if (action === "copySearchMd") copySearchMarkdown();
+    if (action === "downloadSearchMd") downloadSearchMarkdown();
+    if (action === "editTopic") {
+      const editKey = trigger.dataset.editkey;
+      const container = trigger.closest("[data-topic-edit-key]");
+      if (container) openTopicEditor(editKey, container);
+    }
+    if (action === "cancelTopicEdit") {
+      closeTopicEditor(trigger.dataset.editkey, trigger.closest("[data-topic-edit-key]"));
+    }
+    if (action === "revertTopicEdit") {
+      revertTopicEdit(trigger.dataset.editkey);
+    }
+  });
+
+  // 設定パネル(mainの外)のボタン配線
+  settingsPanel.addEventListener("click", event => {
+    const trigger = event.target.closest("[data-action]");
+    if (!trigger) return;
+    const action = trigger.dataset.action;
+    if (action === "downloadTopicEdits") downloadTopicEditsJson();
+    if (action === "downloadDataJs") downloadDataJs();
+    if (action === "discardTopicEdits") discardAllTopicEdits();
+  });
+
+  showUnivTop();
+}
+</script>
+</body>
+</html>
